@@ -1,4 +1,4 @@
-/* ====================== Google Fonts ====================== */
+﻿/* ====================== Google Fonts ====================== */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
 /* ====================== Gantt Chart Section ====================== */
@@ -335,7 +335,7 @@
     transition: none; /* JS drives it each RAF frame */
 }
 
-/* Individual block in a row — shell (outline) */
+/* Individual block in a row - shell (outline) */
 .gantt-block {
     position: absolute;
     top: 6px;
@@ -352,7 +352,7 @@
     cursor: pointer;
     z-index: 3;
     overflow: hidden;
-    /* Shell border — uses the block's background-color via opacity */
+    /* Shell border uses the block's background-color via opacity. */
     opacity: 0; /* hidden before playhead arrives */
     background-color: transparent !important;
     box-sizing: border-box;
@@ -365,7 +365,7 @@
     /* border color set via inline style on .block-fill parent */
 }
 
-/* The fill bar that grows left→right with the playhead */
+/* The fill bar grows left to right with the playhead. */
 .block-fill {
     position: absolute;
     top: 0;
@@ -377,7 +377,7 @@
     display: flex;
     align-items: center;
     overflow: hidden;
-    transition: none; /* no CSS transition — JS drives it */
+    transition: none; /* JS drives it. */
 }
 
 /* Glossy top sheen on the fill */
@@ -599,4 +599,24 @@
 }
 .perf-card .srtf-val {
     color: #f97316;
+}
+
+@media (max-width: 640px) {
+    .gantt-section {
+        padding: 18px 14px;
+    }
+
+    .gantt-header {
+        align-items: stretch;
+    }
+
+    .gantt-controls {
+        width: 100%;
+        justify-content: center;
+        overflow-x: auto;
+    }
+
+    .time-display {
+        margin-left: 0;
+    }
 }

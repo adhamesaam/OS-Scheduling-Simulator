@@ -1,8 +1,9 @@
-// ====================== Import API ======================
+﻿// ====================== Import API ======================
 import { analyzeScheduling } from "./api.js";
 
 let processes = [];
 let nextProcessNumber = 1;
+let editingProcessId = null;
 
 // ====================== Gantt Color Palette ======================
 const GANTT_COLORS = [
@@ -22,6 +23,29 @@ const GANTT_COLORS = [
 
 function getColor(index) {
     return GANTT_COLORS[index % GANTT_COLORS.length];
+}
+
+function getNextProcessNumber() {
+    const highestProcessNumber = processes.reduce((highest, process) => {
+        const match = process.name.match(/^(?:Process|P)(\d+)$/);
+        return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0);
+
+    return highestProcessNumber + 1;
+}
+
+function getNonNegativeInteger(inputId, fallback = 0) {
+    const input = document.getElementById(inputId);
+    const value = Number.parseInt(input.value, 10);
+    const sanitizedValue = Number.isNaN(value) ? fallback : Math.max(0, value);
+
+    input.value = sanitizedValue;
+    return sanitizedValue;
+}
+
+function getProcessColor(pid, fallbackIndex = 0) {
+    const processIndex = processes.findIndex((process) => process.name === pid);
+    return getColor(processIndex === -1 ? fallbackIndex : processIndex);
 }
 
 // ====================== Process Table ======================
@@ -44,10 +68,11 @@ function renderTable() {
 
     processes.forEach((p, index) => {
         const row = document.createElement("tr");
-        row.className = "border-b hover:bg-gray-50 transition";
+        row.className = "border-b hover:bg-gray-50 transition cursor-pointer";
+        row.addEventListener("click", () => editProcess(p.id));
         row.innerHTML = `
             <td class="px-6 py-5 font-medium flex items-center gap-3">
-                <div class="w-5 h-5 rounded-lg" style="background-color: ${getColor(index)}"></div>
+                <div class="w-5 h-5 rounded-lg shrink-0" style="background-color: ${getColor(index)}"></div>
                 ${p.name}
             </td>
             <td class="px-6 py-5">${p.arrival}</td>
@@ -61,21 +86,31 @@ function renderTable() {
         tbody.appendChild(row);
     });
 
-    // ربط أزرار الحذف بعد ما اتعملوا
+    // Bind delete buttons after rendering rows.
     document.querySelectorAll(".delete-btn").forEach((btn) => {
-        btn.addEventListener("click", () =>
-            deleteProcess(Number(btn.dataset.id)),
-        );
+        btn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteProcess(Number(btn.dataset.id));
+        });
     });
 }
 
 function deleteProcess(id) {
     processes = processes.filter((p) => p.id !== id);
+    if (editingProcessId === id) {
+        editingProcessId = null;
+        closeModal();
+    }
+    nextProcessNumber = getNextProcessNumber();
     renderTable();
 }
 
 function addNewProcess() {
+    editingProcessId = null;
+    nextProcessNumber = getNextProcessNumber();
     const newName = `Process${nextProcessNumber}`;
+    document.getElementById("modal-title").textContent = "Add New Process";
+    document.getElementById("modal-add-btn").textContent = "Add Process";
     document.getElementById("modal-process-name").value = newName;
     document.getElementById("modal-arrival").value = 0;
     document.getElementById("modal-burst").value = 0;
@@ -85,29 +120,51 @@ function addNewProcess() {
 
 function closeModal() {
     document.getElementById("add-modal").classList.add("hidden");
+    editingProcessId = null;
 }
 
 function submitAddProcess() {
     const name = document.getElementById("modal-process-name").value;
-    const arrival = parseInt(document.getElementById("modal-arrival").value);
-    const burst = parseInt(document.getElementById("modal-burst").value);
+    const arrival = getNonNegativeInteger("modal-arrival");
+    const burst = getNonNegativeInteger("modal-burst");
 
-    if (isNaN(arrival) || arrival < 0) {
-        alert("⚠️ Arrival Time must be 0 or a positive number!");
-        document.getElementById("modal-arrival").focus();
-        return;
-    }
-
-    if (isNaN(burst) || burst <= 0) {
-        alert("⚠️ CPU Burst must be a positive number (greater than 0)!");
+    if (burst <= 0) {
+        alert("CPU Burst must be a positive number (greater than 0)!");
         document.getElementById("modal-burst").focus();
         return;
     }
 
+    if (editingProcessId !== null) {
+        const process = processes.find((item) => item.id === editingProcessId);
+
+        if (process) {
+            process.arrival = arrival;
+            process.burst = burst;
+        }
+
+        renderTable();
+        closeModal();
+        return;
+    }
+
     processes.push({ id: Date.now(), name, arrival, burst });
-    nextProcessNumber++;
+    nextProcessNumber = getNextProcessNumber();
     renderTable();
     closeModal();
+}
+
+function editProcess(id) {
+    const process = processes.find((item) => item.id === id);
+    if (!process) return;
+
+    editingProcessId = id;
+    document.getElementById("modal-title").textContent = "Edit Process";
+    document.getElementById("modal-add-btn").textContent = "Save Changes";
+    document.getElementById("modal-process-name").value = process.name;
+    document.getElementById("modal-arrival").value = process.arrival;
+    document.getElementById("modal-burst").value = process.burst;
+    document.getElementById("add-modal").classList.remove("hidden");
+    document.getElementById("modal-arrival").focus();
 }
 
 // ====================== Tab Switching ======================
@@ -198,7 +255,7 @@ function createGanttPlayer(key, ganttData) {
 /**
  * Build a row-based Gantt chart that fills all available width.
  * Each process row has:
- *  - A thin "lifespan" line from arrival → last end
+ *  - A thin "lifespan" line from arrival to last end
  *  - Execution blocks (shell + fill) for each scheduled segment
  */
 function buildRowGanttDOM(player) {
@@ -212,7 +269,7 @@ function buildRowGanttDOM(player) {
     } = player;
     const timeline = document.getElementById(`gantt-${key}-timeline`);
 
-    // Measure from #simulation-area — always visible regardless of active tab
+    // Measure from #simulation-area; always visible regardless of active tab.
     const simArea = document.getElementById("simulation-area");
     const outerWidth = simArea.clientWidth - 32;
     const bodyWidth = Math.max(outerWidth - LABEL_WIDTH, 200);
@@ -234,9 +291,10 @@ function buildRowGanttDOM(player) {
     // ----- Left labels -----
     let labelsHTML = `<div class="gantt-label-header" style="height:${HEADER_HEIGHT}px;">Process</div>`;
     uniqueProcesses.forEach((pid, i) => {
+        const color = getProcessColor(pid, i);
         labelsHTML += `
             <div class="gantt-label-row" style="height:${ROW_HEIGHT}px;">
-                <div class="gantt-label-swatch" style="background:${getColor(i)};"></div>
+                <div class="gantt-label-swatch" style="background:${color};"></div>
                 ${pid}
             </div>`;
     });
@@ -258,10 +316,10 @@ function buildRowGanttDOM(player) {
     // ----- Rows with lifespan lines + execution blocks -----
     let rowsHTML = "";
     uniqueProcesses.forEach((pid, rowIndex) => {
-        const color = getColor(rowIndex);
+        const color = getProcessColor(pid, rowIndex);
         const { arrival, lastEnd } = processLifespan[pid];
 
-        // Lifespan line: shell spans arrival → lastEnd, fill grows with playhead
+        // Lifespan line: shell spans arrival to lastEnd, fill grows with playhead.
         const lineLeft = arrival * PX_PER_UNIT;
         const lineWidth = (lastEnd - arrival) * PX_PER_UNIT;
         const lifespanLine = `
@@ -283,10 +341,10 @@ function buildRowGanttDOM(player) {
                 <div class="gantt-block" id="gantt-block-${key}-${seg.globalIndex}"
                      style="left:${left}px; width:${width}px; border-color:${color}; color:${color};"
                      data-start="${seg.start}" data-end="${seg.end}">
-                    <span class="block-tip">${pid} | ${seg.start}→${seg.end} (${duration}u)</span>
+                    <span class="block-tip">${pid} | ${seg.start}->${seg.end} (${duration}u)</span>
                     <div class="block-fill" id="block-fill-${key}-${seg.globalIndex}"
                          style="background-color:${color}; width:0%;">
-                        ${showLabel ? `<span class="block-label">${seg.start}–${seg.end}</span>` : ""}
+                        ${showLabel ? `<span class="block-label">${seg.start}-${seg.end}</span>` : ""}
                     </div>
                 </div>`;
         });
@@ -325,7 +383,7 @@ function buildRowGanttDOM(player) {
         .map(
             (pid, i) => `
         <div class="gantt-legend-item">
-            <div class="gantt-legend-swatch" style="background:${getColor(i)};"></div>
+            <div class="gantt-legend-swatch" style="background:${getProcessColor(pid, i)};"></div>
             <span>${pid}</span>
         </div>
     `,
@@ -520,7 +578,7 @@ function updatePlayIcon(player) {
 
 function updateSpeedLabel(player) {
     const label = document.getElementById(`${player.key}-speed-label`);
-    if (label) label.textContent = `${SPEEDS[player.speedIndex]}×`;
+    if (label) label.textContent = `${SPEEDS[player.speedIndex]}x`;
 }
 
 // ====================== Results Table ======================
@@ -691,13 +749,13 @@ function renderAnalyticalConclusion(rrMetrics, srtfMetrics, quantumVal) {
 
 async function runSimulation() {
     if (processes.length === 0) {
-        alert("⚠️ Please add at least one process!");
+        alert("Please add at least one process!");
         return;
     }
 
     const quantumVal = parseInt(document.getElementById("time-quantum").value);
     if (isNaN(quantumVal) || quantumVal <= 0) {
-        alert("⚠️ Time Quantum must be a positive number (greater than 0)!");
+        alert("Time Quantum must be a positive number (greater than 0)!");
         document.getElementById("time-quantum").focus();
         return;
     }
@@ -709,7 +767,7 @@ async function runSimulation() {
 
     try {
         const result = await analyzeScheduling(quantumVal, processes);
-        console.log("✅ Result from backend:", result);
+        console.log("Result from backend:", result);
 
         const data = result.data;
 
@@ -745,7 +803,7 @@ async function runSimulation() {
         renderAnalyticalConclusion(rrMetrics, srtfMetrics, quantumVal);
     } catch (error) {
         console.error("Error:", error);
-        alert("❌ Failed to connect to server:\n" + error.message);
+        alert("Failed to connect to server:\n" + error.message);
     } finally {
         runBtn.innerHTML = originalText;
         runBtn.disabled = false;
@@ -851,13 +909,14 @@ function loadScenario() {
             break;
         case "E":
             // Scenario E: Validation case
-            // Invalid quantum and empty processes to show frontend validation
-            quantum = -2;
+            // Empty processes to show frontend validation without allowing negative input.
+            quantum = 0;
             processes = [];
             nextProcessNumber = 1;
             break;
     }
 
+    nextProcessNumber = getNextProcessNumber();
     document.getElementById("time-quantum").value = quantum;
     renderTable();
 }
@@ -870,7 +929,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: Date.now() + 2, name: "Process2", arrival: 2, burst: 3 },
         { id: Date.now() + 3, name: "Process3", arrival: 4, burst: 8 },
     ];
-    nextProcessNumber = 4;
+    nextProcessNumber = getNextProcessNumber();
     renderTable();
     switchTab("rr");
 
@@ -906,4 +965,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document
         .getElementById("srtf-controls")
         .addEventListener("click", handleControlClick);
+
+    ["time-quantum", "modal-arrival", "modal-burst"].forEach((inputId) => {
+        const input = document.getElementById(inputId);
+        input.addEventListener("input", () => getNonNegativeInteger(inputId));
+    });
 });
