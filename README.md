@@ -489,9 +489,3 @@ The backend exposes a single endpoint.
   }
 }
 ```
-
----
-
-## License
-
-MIT
