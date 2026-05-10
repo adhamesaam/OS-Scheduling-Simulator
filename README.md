@@ -40,11 +40,11 @@ The simulator accepts a dynamic number of processes at runtime, validates all in
 | ------------------ | ---------- |
 | Adham Essam        | 20240110   |
 | Ammar Moamen       | 20240618   |
-| Khalid hessain     |            |
+| Khalid hessain     | 20240325   |
 | Eissa Mohamed      | 20240673   |
-| Belal AbdElhady    |            |
+| Belal AbdElhady    | 20240211   |
 | Youssef Mahmoud    | 20241191   |
-| Abd El-rahman Rizk |            |
+| Abd El-rahman Rizk | 20240211   |
 
 > **Team Number:** _(Add team number)_
 
@@ -131,15 +131,10 @@ project-root/
 │   ├── Scheduling Algorithms/
 │   │   ├── Round_Robin.c                     # Round Robin implementation
 │   │   └── SRTF.c                            # SRTF implementation
-│   ├── Data Structures/
-│   │   ├── Doubly_sorted_linked_queue.c      # Doubly sorted linked list
-│   │   ├── Doubly_sorted_linked_queue.h
-│   │   ├── Circular_Linked_queue.c           # Circular linked queue
-│   │   └── Circular_Linked_queue.h
-│   ├── main.c                                # Entry point; parses input & outputs JSON
-│   ├── scheduler.h                           # Shared structs: Process, GanttSegment, SimulationResult
+│   ├
+│   ├── main.c                                # Entry point; parses input & outputs
+│   ├── scheduler.h                           # Shared structs: Process,
 │   ├── Makefile                              # Build file for the C engine
-│   └── datafromC.json                        # Sample JSON output for reference
 │
 ├── BackEnd/                                  # Node.js API server
 │   ├── app.js                                # HTTP server; validates payload & invokes C engine
@@ -150,17 +145,15 @@ project-root/
 │   ├── index.html                            # Main UI (Tailwind CSS)
 │   ├── script.js                             # UI logic, Gantt player engine, analysis rendering
 │   ├── api.js                                # Fetch wrapper for the backend API
-│   └── style.css                             # Custom Gantt chart and control styles
+│   └── style.css                             # Custom Gantt chart and control
 │
-├── assets/
-│   └── screenshots/                          # Interface and Gantt chart screenshots
-│
-├── test-cases/                               # Documented test scenarios with inputs and outputs
-│   ├── scenario-A.md
-│   ├── scenario-B.md
-│   ├── scenario-C.md
-│   ├── scenario-D.md
-│   └── scenario-E.md
+├── screenshots/                              # Interface and Gantt chart screenshots
+│   ├── Screenshot 2026-05-09 184017.png
+│   ├── Screenshot 2026-05-09 184053.png
+│   ├── Screenshot 2026-05-09 184122.png
+│   ├── Screenshot 2026-05-09 184127.png
+│   ├── Screenshot 2026-05-09 184134.png
+│   └── Screenshot 2026-05-09 184150.png
 │
 ├── run.js                                    # One-command launcher for both servers
 ├── .gitignore
@@ -205,15 +198,21 @@ make
 
 This produces the `scheduler_engine` binary. The backend references it at `../C/scheduler_engine`.
 
-> **Windows users:** Run the following from inside the `C/` directory:
+> **Linux Users:** Run the following from inside the `OS-SCHEDULING-SIMULATOR/C` directory:
 >
 > ```bash
-> gcc -Wall -Wextra -O2 -o main.exe main.c "Scheduling Algorithms/Round_Robin.c" "Scheduling Algorithms/SRTF.c"
+> gcc ./main.c "./Scheduling Algorithms/Round_Robin.c" "./Scheduling Algorithms/SRTF.c" -o ./main.exe
 > ```
 >
 > Then confirm that the `enginePath` variable in `BackEnd/app.js` is set to `"../C/main.exe"`.
 
----
+> **Windows Users:** Run the following from inside the `C/` directory:
+>
+> ```bash
+> gcc .\main.c ".\Scheduling Algorithms\Round_Robin.c" ".\Scheduling Algorithms\SRTF.c" -o .\main.exe;
+> ```
+>
+> Then confirm that the `enginePath` variable in `BackEnd/app.js` is set to `"../C/main.exe"`.
 
 ### Step 2 — Start Both Servers
 
@@ -261,7 +260,11 @@ npm run server
 npx serve FrontEnd
 ```
 
----
+### If you want to only run the main.exe file without the backend, you can run it directly from the command line:
+
+```bash
+./main.exe "4 p1 1 3 p2 2 6"
+```
 
 ## Test Scenarios
 
