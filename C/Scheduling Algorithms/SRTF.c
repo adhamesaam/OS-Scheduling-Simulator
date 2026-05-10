@@ -49,9 +49,7 @@ SimulationResult run_srtf(Process processes[], int num_processes) {
             }
             if (next_arrival != INT_MAX) {
                 current_time = next_arrival;
-            } else {
-                current_time++;
-            }
+            } 
             current_pid_idx = -1;
             continue;
         }
