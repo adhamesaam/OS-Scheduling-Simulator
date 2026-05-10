@@ -47,12 +47,12 @@ SimulationResult run_srtf(Process processes[], int num_processes) {
                      next_arrival = processes[i].arrival_time;
                  }
             }
-            if (next_arrival != INT_MAX) {
-                current_time = next_arrival;
-            } 
+            current_time = next_arrival;
+            
             current_pid_idx = -1;
             continue;
-        }
+        
+
 
         if (processes[shortest_idx].first_start_time == -1) {
             processes[shortest_idx].first_start_time = current_time;
