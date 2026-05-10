@@ -51,7 +51,7 @@ SimulationResult run_srtf(Process processes[], int num_processes) {
             
             current_pid_idx = -1;
             continue;
-        
+        }
 
 
         if (processes[shortest_idx].first_start_time == -1) {
